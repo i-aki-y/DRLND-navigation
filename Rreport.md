@@ -12,8 +12,7 @@ To solve this project, I tried the following methods.
 #### 1. DQN
 
 ##### Algorithm
-My solution based on the code from coding exercise in lesson 2.
-This model includes implementation of "Experience Replay" and "Fixed Q-Targets" techniques[^1].
+My solution based on the code from coding exercise in lesson 2. This model includes implementation of "Experience Replay" and "Fixed Q-Targets" techniques[^1].
 
 In Q-learning, the raw transaction data $(S_t, a_t, r_r, S_{t+1})$ are highly correlated, and that correlation makes learning unstable. Experience Replay is a technique in which we pools generated transactions into a memory buffer, and then randomly samples pooled transactions from the buffer. This procedure reduces undesirable correlation.
 
@@ -21,10 +20,11 @@ Fixed Q-Targets is another technique to reduce correlation. In Q-learning update
 
 ##### Network
 
-I used 3-dense layers network as a model. Each hidden units are (64, 64).
-```
-        self.fc1 = nn.Linear(state_size, fc1_units)
-        self.fc2 = nn.Linear(fc1_units, fc2_units)
+I used 3-dense layers network as a model. The hidden units are (64, 64).
+
+```py
+        self.fc1 = nn.Linear(state_size, fc1_units) # fc1_units:64
+        self.fc2 = nn.Linear(fc1_units, fc2_units)  # fc2_units:64
         self.fc3 = nn.Linear(fc2_units, action_size)
 ```
 We added RL activations after the first and second layers. In the training phase I used Adam optimizer.
