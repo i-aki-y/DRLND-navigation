@@ -213,7 +213,7 @@ class PrioritizedAgent(Agent):
                 # Use regular memory buffer until buffer is filled.
                 if len(self.memory) > BATCH_SIZE:
                     experiences = self.memory.sample()
-                    self.learn(experiences, GAMMA)
+                    self.learn(experiences, 1, GAMMA)
             else:
                 # Buffer is filled, start to use prioritized buffer
                 # When buffer is filled, start to use prioritized sampling
@@ -222,11 +222,11 @@ class PrioritizedAgent(Agent):
                     self.show_switched = False
 
                 idx_exp = self.p_memory.sample()
-                indecis, experiences = idx_exp[0], idx_exp[1:]
-                td_errors = self.learn(experiences, GAMMA)
+                indecis, weights, experiences = idx_exp[0], idx_exp[1], idx_exp[2:]
+                td_errors = self.learn(experiences, weights, GAMMA)
                 self.update_td_error(indecis, td_errors)
 
-    def learn(self, experiences, gamma):
+    def learn(self, experiences, weights, gamma):
         """Update value parameters using given batch of experience tuples.
 
         Params
@@ -245,9 +245,11 @@ class PrioritizedAgent(Agent):
 
         # Compute Q targets for current states
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+        Q_targets = weights * Q_targets
 
         # Get expected Q values from local model
         Q_expected = self.qnetwork_local(states).gather(1, actions)
+        Q_expected = weights * Q_expected
 
         td_errors = np.abs((Q_targets.detach() - Q_expected.detach()).data.numpy()).squeeze()
         # Compute loss
@@ -311,6 +313,8 @@ class ReplayBuffer:
 class PrioritizedReplayBuffer:
     e = 1e-5
     alpha = 0.6
+    beta = 0.4
+    beta_increment_per_sampling = 0.001
 
     def __init__(self, buffer_size, batch_size, seed):
         self.batch_size = batch_size
@@ -332,6 +336,9 @@ class PrioritizedReplayBuffer:
         indecis = []
         segment = self.tree.total() / self.batch_size
 
+        priorities = []
+        self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])
+
         for i in range(self.batch_size):
             a = segment * i
             b = segment * (i + 1)
@@ -341,16 +348,22 @@ class PrioritizedReplayBuffer:
 
             if len(data) < 5:
                 raise ValueError("missed data")
+            priorities.append(p)
             experiences.append(data)
             indecis.append(idx)
 
+        sampling_probabilities = priorities / self.tree.total()
+        is_weights = np.power(self.tree.n_entries * sampling_probabilities, -self.beta)
+        is_weights /= is_weights.max()
+
+        is_weights = torch.from_numpy(np.vstack([w for w in is_weights if w is not None])).float().to(device)
         states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
         actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
         rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
 
-        return (indecis, states, actions, rewards, next_states, dones)
+        return (indecis, is_weights, states, actions, rewards, next_states, dones)
 
     def update(self, idx, error):
         p = self._get_priority(error)

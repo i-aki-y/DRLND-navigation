@@ -10,6 +10,7 @@ class SumTree:
         self.capacity = capacity
         self.tree = np.zeros(2*capacity - 1)
         self.data = np.zeros(capacity, dtype=object)
+        self.n_entries = 0
 
     def _propagate(self, idx, change):
         parent = (idx - 1) // 2
@@ -43,6 +44,9 @@ class SumTree:
         self.write += 1
         if self.write >= self.capacity:
             self.write = 0
+
+        if self.n_entries < self.capacity:
+            self.n_entries += 1
 
     def update(self, idx, p):
         change = p - self.tree[idx]
