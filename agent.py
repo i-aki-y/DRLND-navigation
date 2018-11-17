@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from sumtree import SumTree
-from model import QNetwork
+from model import QNetwork, LeNet
 
 RESULT_DIR = "./results/"
 BUFFER_SIZE = int(5e4)  # replay buffer size
@@ -267,6 +267,83 @@ class PrioritizedAgent(Agent):
     def update_td_error(self, indecis, td_errors):
         for idx, td_error in zip(indecis, td_errors):
             self.p_memory.update(idx, td_error)
+
+
+class ImageAgent(Agent):
+
+    def __init__(self, state_size, action_size, use_double_dqn=False,  eps_start=1.0, eps_end=0.001, eps_decay=0.995, seed=13):
+        """Initialize an Agent object.
+
+        Params
+        ======
+            state_size (int): dimension of each state
+            action_size (int): dimension of each action
+            use_double_dqn(bool): use doubl DQN or not
+            eps_start: initial value parameter for epsilon greedy
+            eps_end: minimum value parameter for epsilon greedy
+            eps_decay: decay rate parameter for epsilon greedy
+            seed (int): random seed
+        """
+        self.state_size = state_size
+        self.action_size = action_size
+
+        self.use_double_dqn = use_double_dqn
+
+        self.eps_start = eps_start
+        self.eps_end = eps_end
+        self.eps_decay = eps_decay
+        self.eps = eps_start
+
+        self.seed = random.seed(seed)
+
+        # Q-Network
+        self.qnetwork_local = LeNet(state_size, action_size, seed).to(device)
+        self.qnetwork_target = LeNet(state_size, action_size, seed).to(device)
+        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+
+        # Replay memory
+        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
+        # Initialize time step (for updating every UPDATE_EVERY steps)
+        self.t_step = 0
+
+
+class PrioritizedImageAgent(PrioritizedAgent):
+
+    def __init__(self, state_size, action_size, use_double_dqn=False,  eps_start=1.0, eps_end=0.001, eps_decay=0.995, seed=13):
+        """Initialize an Agent object.
+
+        Params
+        ======
+            state_size (int): dimension of each state
+            action_size (int): dimension of each action
+            use_double_dqn(bool): use doubl DQN or not
+            eps_start: initial value parameter for epsilon greedy
+            eps_end: minimum value parameter for epsilon greedy
+            eps_decay: decay rate parameter for epsilon greedy
+            seed (int): random seed
+        """
+        self.state_size = state_size
+        self.action_size = action_size
+
+        self.use_double_dqn = use_double_dqn
+
+        self.eps_start = eps_start
+        self.eps_end = eps_end
+        self.eps_decay = eps_decay
+        self.eps = eps_start
+
+        self.seed = random.seed(seed)
+
+        # Q-Network
+        self.qnetwork_local = LeNet(state_size, action_size, seed).to(device)
+        self.qnetwork_target = LeNet(state_size, action_size, seed).to(device)
+        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+
+        # Replay memory
+        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
+        # Initialize time step (for updating every UPDATE_EVERY steps)
+        self.t_step = 0
+
 
 
 class ReplayBuffer:
