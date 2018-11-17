@@ -1,4 +1,5 @@
 Banana.app/
+VisualBanana.app
 __pycache__/
 .ipynb_checkpoints/
 *.log
