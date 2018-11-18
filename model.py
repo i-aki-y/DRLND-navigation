@@ -70,3 +70,40 @@ class LeNet(nn.Module):
     def num_flat_features(self, x):
         size = x.size()[1:]  # all dimensions except the batch dimension
         return np.prod(size)
+
+
+class GapLeNet(nn.Module):
+    """Actor (Policy) Model.
+    LeNet with Global average pooling
+    """
+
+    def __init__(self, state_size, action_size, seed):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): Dimension of each state
+            action_size (int): Dimension of each action
+            seed (int): Random seed
+        """
+        super().__init__()
+        dropout_rate = 0.0
+        self.num_classes = action_size
+        self.seed = torch.manual_seed(seed)
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.bn1 = nn.BatchNorm2d(6)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.bn2 = nn.BatchNorm2d(16)
+        self.conv3 = nn.Conv2d(16, self.num_classes, 1)
+
+    def forward(self, x):
+        """Build a network that maps state -> action values."""
+        x = x.view(-1, 3, 32, 32)
+        x = F.max_pool2d(F.relu(self.bn1(self.conv1(x))), 2)
+        x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), 2)
+        x = F.adaptive_avg_pool2d(F.relu(self.conv3(x)), (1, 1))
+        x = x.view(x.size(0), self.num_classes)
+        return x
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]  # all dimensions except the batch dimension
+        return np.prod(size)
