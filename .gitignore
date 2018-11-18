@@ -1,5 +1,6 @@
 Banana.app/
 VisualBanana.app
+VisualBanana_Linux
 __pycache__/
 .ipynb_checkpoints/
 *.log
